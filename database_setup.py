@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS omdb_movies (
  title TEXT PRIMARY KEY,
  imdb_rating REAL,
  box_office REAL,
- runtime TEXT
+ runtime INTEGER
 );
 """)
 
