@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS tmdb_movies (
  vote_average REAL,
  genre_ids TEXT
 );
-""")
+""") 
 
 cur.execute("""
 CREATE TABLE IF NOT EXISTS tmdb_genres (

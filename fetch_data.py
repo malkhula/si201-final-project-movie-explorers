@@ -51,6 +51,10 @@ def clean_box_office(value):
      return None  #return None
  return float(re.sub(r"[^\d]", "", value))  #remove non-digit characters and convert to float
 
+def clean_runtime(value):
+    if not value or value in ["N/A", None]:
+        return None
+    return int(value.replace(" min", ""))
 
 def fetch_omdb(movie_title):
  url = f"http://www.omdbapi.com/?t={movie_title}&apikey={OMdb_API_KEY}"  #url for OMdb API
@@ -65,13 +69,17 @@ def fetch_omdb(movie_title):
  rating = data.get("imdbRating")  #get IMdb rating
  rating = float(rating) if rating not in ["N/A", None] else None  #convert rating to float if valid
  box = clean_box_office(data.get("BoxOffice"))  #clean box office value
- runtime = data.get("Runtime")  #get runtime string
+ runtime = clean_runtime(data.get("Runtime"))   #get runtime
  cur.execute("""
      INSERT OR REPLACE INTO omdb_movies (title, imdb_rating, box_office, runtime)
      VALUES (?, ?, ?, ?)
  """, (movie_title, rating, box, runtime))  #insert or update movie data
  conn.commit()  #commit changes to db
 
+def clean_related_movie(value):
+    if not value or value in ["N/A", None, ""]:  
+        return None
+    return value.strip()
 
 def fetch_tastedive_recommendations(movie_title):
  url = f"https://tastedive.com/api/similar?q={movie_title}&type=movies&limit=20&k={TASTEDIVE_KEY}"  #tastedive API url
@@ -82,11 +90,18 @@ def fetch_tastedive_recommendations(movie_title):
           INSERT OR IGNORE INTO tastedive_recommendations (movie_title, related_movie)
           VALUES (?, ?)
       """, (movie_title, "No Recommendation"))  #insert recommendation into db
- else:
-    for r in recs:  #loop through recommendations
-     cur.execute("INSERT OR IGNORE INTO tastedive_recommendations (movie_title, related_movie) VALUES (?, ?)",
-                 (movie_title, r.get("Name")))  #insert recommendation into db
- conn.commit()  #commit changes to db
+     conn.commit()
+     return
+ for r in recs:  #loop through recommendations
+     name = r.get("Name")
+     if not name or name in ["N/A", None, ""]:  #skip bad values
+        continue
+     name = name.strip() 
+     cur.execute("""
+        INSERT OR IGNORE INTO tastedive_recommendations (movie_title, related_movie)
+        VALUES (?, ?)
+     """, (movie_title, name))
+     conn.commit()
 
 def fetch_all_data():
  print("Fetching TMdb genres…")  #print status message
